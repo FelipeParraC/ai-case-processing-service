@@ -6,11 +6,10 @@ from app.core.middleware import RequestTracingMiddleware
 
 from app.infrastructure.database.init_db import init_db
 
-from app.api.routes import cases
+from app.api.routes import solicitudes
 
 
 init_db()
-
 
 app = FastAPI(
     title=settings.APP_NAME,
@@ -19,7 +18,7 @@ app = FastAPI(
 
 app.add_middleware(RequestTracingMiddleware)
 
-app.include_router(cases.router)
+app.include_router(solicitudes.router)
 
 app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(Exception, unhandled_exception_handler)
