@@ -1,5 +1,6 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 
+from app.core.errors import http_exception_handler, unhandled_exception_handler
 from app.core.config import settings
 from app.core.middleware import RequestTracingMiddleware
 
@@ -19,6 +20,9 @@ app = FastAPI(
 app.add_middleware(RequestTracingMiddleware)
 
 app.include_router(cases.router)
+
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(Exception, unhandled_exception_handler)
 
 
 
