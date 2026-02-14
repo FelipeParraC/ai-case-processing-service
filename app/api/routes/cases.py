@@ -14,6 +14,7 @@ from app.api.schemas.case_response import CaseProcessResponse
 from app.domain.validators.minimum_information_validator import MinimumInformationValidator
 
 from app.application.services.classification_service import ClassificationService
+from app.application.services.priority_service import PriorityService
 
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
@@ -80,6 +81,14 @@ def process_case(
         validation.cleaned_message
     )
 
+    priority_service = PriorityService()
+    priority = priority_service.determine_priority(
+        request.company_code,
+        validation.cleaned_message,
+        classification.case_type,
+        request.metadata
+    )
+
     latency_ms = int((time.time() - start_time) * 1000)
 
     RequestLogRepository(db).create(
@@ -98,6 +107,10 @@ def process_case(
             "case_type": classification.case_type,
             "confidence": classification.confidence,
             "justification": classification.justification,
+
+            "priority_level": priority.level,
+            "priority_score": priority.score,
+            "priority_reason": priority.reason,
         }
     )
 
