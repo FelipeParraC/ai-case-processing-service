@@ -1,10 +1,12 @@
 from fastapi import FastAPI
 from app.core.config import settings
+from app.infrastructure.database.init_db import init_db
+
+init_db()
 
 app = FastAPI(
     title=settings.APP_NAME,
     version="1.0.0",
-    description="Microservicio de procesamiento inteligente de casos"
 )
 
 
@@ -15,7 +17,4 @@ def live():
 
 @app.get("/health/ready")
 def ready():
-    return {
-        "status": "ready",
-        "environment": settings.APP_ENV
-    }
+    return {"status": "ready"}
