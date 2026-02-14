@@ -13,6 +13,8 @@ from app.api.schemas.case_response import CaseProcessResponse
 
 from app.domain.validators.minimum_information_validator import MinimumInformationValidator
 
+from app.application.services.classification_service import ClassificationService
+
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -46,7 +48,6 @@ def process_case(
         )
     
     validator = MinimumInformationValidator()
-
     validation = validator.validate(request.message)
 
     if not validation.is_valid:
@@ -72,6 +73,12 @@ def process_case(
                 "errors": validation.errors
             }
         )
+    
+    classification_service = ClassificationService(db)
+    classification = classification_service.classify(
+        company.id,
+        validation.cleaned_message
+    )
 
     latency_ms = int((time.time() - start_time) * 1000)
 
@@ -84,7 +91,13 @@ def process_case(
 
     return CaseProcessResponse(
         request_id=request_id,
-        status="RECEIVED",
+        status="CLASSIFIED",
         company_found=True,
-        message="Case received successfully",
+        message="Case classified successfully",
+        metadata={
+            "case_type": classification.case_type,
+            "confidence": classification.confidence,
+            "justification": classification.justification,
+        }
     )
+
