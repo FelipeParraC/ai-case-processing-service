@@ -2,29 +2,117 @@ from datetime import date
 
 
 PRIORITY_MAP = {
+
     "HIGH": "Alta",
     "MEDIUM": "Media",
-    "LOW": "Baja"
+    "LOW": "Baja",
+
+    "Alta": "Alta",
+    "Media": "Media",
+    "Baja": "Baja",
 }
 
+
 NEXT_STEP_MAP = {
-    "ESCALATE_IMMEDIATELY": "ESCALAMIENTO",
-    "CREATE_EXTERNAL_CASE": "GESTIÓN EXTERNA",
-    "QUEUE_FOR_REVIEW": "REVISIÓN INTERNA"
+
+    "ESCALATE_IMMEDIATELY": "GESTION_EXTERNA",
+    "CREATE_EXTERNAL_CASE": "GESTION_EXTERNA",
+
+    "RESPOND_DIRECTLY": "RESPUESTA_DIRECTA",
+    "QUEUE_FOR_REVIEW": "RESPUESTA_DIRECTA",
+
+    "INSUFFICIENT_INFORMATION": "CIERRE_POR_INFORMACION_INSUFICIENTE",
+    "CLOSE_INSUFFICIENT_INFO": "CIERRE_POR_INFORMACION_INSUFICIENTE",
+
+    "GESTION_EXTERNA": "GESTION_EXTERNA",
+    "RESPUESTA_DIRECTA": "RESPUESTA_DIRECTA",
+    "CIERRE_POR_INFORMACION_INSUFICIENTE": "CIERRE_POR_INFORMACION_INSUFICIENTE",
 }
 
 
 class SolicitudMapper:
 
-    def map(
+    def map_success(
         self,
-        compania,
-        solicitud_id,
+        compania: str,
+        solicitud_id: str,
         classification,
         priority,
         extraction,
         external_case,
         next_step,
+    ):
+
+        prioridad = PRIORITY_MAP.get(
+            priority.level,
+            "Media"
+        )
+
+        proximo_paso = NEXT_STEP_MAP.get(
+            next_step.action,
+            "RESPUESTA_DIRECTA"
+        )
+
+        solicitud_id_plataforma = (
+            external_case.case_id
+            if external_case and proximo_paso == "GESTION_EXTERNA"
+            else None
+        )
+
+        estado = (
+            "pendiente"
+            if proximo_paso == "GESTION_EXTERNA"
+            else "cerrado"
+        )
+
+        tipo = (
+            classification.case_type
+            if classification.case_type
+            else "No clasificada"
+        )
+
+        justificacion = (
+            classification.justification
+            if classification.justification
+            else "Clasificación automática basada en reglas del sistema."
+        )
+
+        return {
+
+            "compania": compania,
+
+            "solicitud_id": solicitud_id,
+
+            "solicitud_fecha": date.today().isoformat(),
+
+            "solicitud_tipo": tipo,
+
+            "solicitud_prioridad": prioridad,
+
+            "solicitud_id_cliente": extraction.get(
+                "numero_documento",
+                ""
+            ),
+
+            "solicitud_tipo_id_cliente": extraction.get(
+                "tipo_documento",
+                ""
+            ),
+
+            "solicitud_id_plataforma_externa": solicitud_id_plataforma,
+
+            "proximo_paso": proximo_paso,
+
+            "justificacion": justificacion,
+
+            "estado": estado,
+        }
+
+
+    def map_insufficient_information(
+        self,
+        compania: str,
+        solicitud_id: str,
     ):
 
         return {
@@ -33,30 +121,21 @@ class SolicitudMapper:
 
             "solicitud_id": solicitud_id,
 
-            "solicitud_fecha": date.today(),
+            "solicitud_fecha": date.today().isoformat(),
 
-            "solicitud_tipo": classification.case_type,
+            "solicitud_tipo": "No clasificada",
 
-            "solicitud_prioridad": PRIORITY_MAP.get(
-                priority.level,
-                "Media"
-            ),
+            "solicitud_prioridad": "Baja",
 
-            "solicitud_id_cliente": extraction["numero_documento"],
+            "solicitud_id_cliente": "",
 
-            "solicitud_tipo_id_cliente": extraction["tipo_documento"],
+            "solicitud_tipo_id_cliente": "",
 
-            "solicitud_id_plataforma_externa": (
-                external_case.case_id
-                if external_case else None
-            ),
+            "solicitud_id_plataforma_externa": None,
 
-            "proximo_paso": NEXT_STEP_MAP.get(
-                next_step.action,
-                "REVISIÓN INTERNA"
-            ),
+            "proximo_paso": "CIERRE_POR_INFORMACION_INSUFICIENTE",
 
-            "justificacion": classification.justification,
+            "justificacion": "Información incompleta o faltante.",
 
-            "estado": "pendiente"
+            "estado": "cerrado",
         }

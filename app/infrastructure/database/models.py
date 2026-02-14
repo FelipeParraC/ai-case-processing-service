@@ -2,46 +2,41 @@ import uuid
 from datetime import datetime
 
 from sqlalchemy import (
+    Column,
     String,
     Boolean,
     DateTime,
     ForeignKey,
     Integer,
     JSON,
+    UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.infrastructure.database.session import Base
-
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from app.infrastructure.database.base import Base
 
 class Company(Base):
 
     __tablename__ = "companies"
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id = Column(
+        UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4
     )
 
-    name: Mapped[str] = mapped_column(String, nullable=False)
-
-    code: Mapped[str] = mapped_column(
+    nombre = Column(
         String,
         unique=True,
         nullable=False
     )
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True
+    categories = relationship(
+        "Category",
+        back_populates="company",
+        cascade="all, delete-orphan"
     )
 
-    created_at: Mapped[datetime] = mapped_column(
-        DateTime,
-        default=datetime.utcnow
-    )
-
-    categories = relationship("Category", back_populates="company")
 
 
 class Category(Base):
@@ -77,35 +72,27 @@ class Rule(Base):
 
     __tablename__ = "rules"
 
-    id: Mapped[uuid.UUID] = mapped_column(
+    id = Column(
+        UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4
     )
 
-    company_id: Mapped[uuid.UUID] = mapped_column(
+    compania_id = Column(
+        UUID(as_uuid=True),
         ForeignKey("companies.id"),
         nullable=False
     )
 
-    rule_type: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
+    case_type = Column(String)
 
-    config: Mapped[dict] = mapped_column(
-        JSON,
-        nullable=False
-    )
+    keywords = Column(JSONB)
 
-    version: Mapped[int] = mapped_column(
-        Integer,
-        default=1
-    )
+    priority = Column(String)
 
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True
-    )
+    next_step = Column(String)
+
+    justification_template = Column(String)
 
 
 class RequestLog(Base):
@@ -151,4 +138,56 @@ class RequestLog(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow
+    )
+
+class SolicitudRecord(Base):
+
+    __tablename__ = "solicitudes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        primary_key=True,
+        default=uuid.uuid4
+    )
+
+    company_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companies.id"),
+        nullable=False
+    )
+
+    solicitud_id: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    request_id: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    status: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    external_case_id: Mapped[str | None] = mapped_column(
+        String,
+        nullable=True
+    )
+
+    response_json: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=False
+    )
+
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    __table_args__ = (
+        UniqueConstraint(
+            "company_id",
+            "solicitud_id",
+            name="uq_company_solicitud"
+        ),
     )

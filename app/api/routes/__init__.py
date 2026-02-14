@@ -1,1 +1,1 @@
-from . import cases
+from . import solicitudes
