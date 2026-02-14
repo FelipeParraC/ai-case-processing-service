@@ -1,6 +1,8 @@
 from fastapi import FastAPI
 
 from app.core.config import settings
+from app.core.middleware import RequestTracingMiddleware
+
 from app.infrastructure.database.init_db import init_db
 
 from app.api.routes import cases
@@ -14,8 +16,10 @@ app = FastAPI(
     version="1.0.0",
 )
 
+app.add_middleware(RequestTracingMiddleware)
 
 app.include_router(cases.router)
+
 
 
 @app.get("/health/live")

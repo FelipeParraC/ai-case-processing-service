@@ -1,7 +1,7 @@
 import uuid
 import time
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database.dependencies import get_db
@@ -25,12 +25,13 @@ router = APIRouter(prefix="/cases", tags=["Cases"])
 @router.post("/process", response_model=CaseProcessResponse)
 def process_case(
     request: CaseProcessRequest,
+    http_request: Request,
     db: Session = Depends(get_db),
 ):
 
     start_time = time.time()
 
-    request_id = str(uuid.uuid4())
+    request_id = http_request.state.request_id
 
     company_repo = CompanyRepository(db)
 
