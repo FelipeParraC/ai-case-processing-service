@@ -1,4 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, logger
+import logging
+
+from fastapi import APIRouter, Depends, HTTPException
+
 from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from fastapi import Request
@@ -20,7 +23,7 @@ from app.application.services.solicitud_mapper import SolicitudMapper
 
 from app.domain.policies.next_step_policy import NextStepPolicy
 
-
+logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/solicitudes", tags=["Solicitudes"])
 
 
