@@ -11,9 +11,11 @@ from app.infrastructure.repositories.request_log_repository import RequestLogRep
 from app.api.schemas.case_request import CaseProcessRequest
 from app.api.schemas.case_response import CaseProcessResponse
 
+from app.domain.policies.next_step_policy import NextStepPolicy
 from app.domain.validators.minimum_information_validator import MinimumInformationValidator
 
 from app.application.services.classification_service import ClassificationService
+from app.application.services.platform_service import PlatformService
 from app.application.services.priority_service import PriorityService
 
 
@@ -89,6 +91,25 @@ def process_case(
         request.metadata
     )
 
+    next_step_policy = NextStepPolicy()
+    next_step = next_step_policy.determine_next_step(
+        priority.level,
+        classification.case_type,
+        request.metadata
+    )
+
+    external_case = None
+    if next_step.action == "CREATE_EXTERNAL_CASE":
+
+        platform_service = PlatformService()
+
+        external_case = platform_service.create_case(
+            request.company_code,
+            classification.case_type,
+            priority.level,
+            validation.cleaned_message
+        )
+
     latency_ms = int((time.time() - start_time) * 1000)
 
     RequestLogRepository(db).create(
@@ -110,7 +131,14 @@ def process_case(
 
             "priority_level": priority.level,
             "priority_score": priority.score,
-            "priority_reason": priority.reason,
+
+            "next_step": next_step.action,
+            "next_step_reason": next_step.reason,
+
+            "external_case": (
+                external_case.model_dump()
+                if external_case else None
+            )
         }
     )
 
