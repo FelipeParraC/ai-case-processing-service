@@ -11,6 +11,8 @@ from app.infrastructure.repositories.request_log_repository import RequestLogRep
 from app.api.schemas.case_request import CaseProcessRequest
 from app.api.schemas.case_response import CaseProcessResponse
 
+from app.domain.validators.minimum_information_validator import MinimumInformationValidator
+
 
 router = APIRouter(prefix="/cases", tags=["Cases"])
 
@@ -41,6 +43,34 @@ def process_case(
         raise HTTPException(
             status_code=404,
             detail="Company not found"
+        )
+    
+    validator = MinimumInformationValidator()
+
+    validation = validator.validate(request.message)
+
+    if not validation.is_valid:
+
+        RequestLogRepository(db).create(
+            request_id=request_id,
+            company_id=company.id,
+            status="INVALID",
+            error_code="INVALID_MESSAGE",
+            error_detail={
+                "missing_fields": validation.missing_fields,
+                "errors": validation.errors
+            }
+        )
+
+        return CaseProcessResponse(
+            request_id=request_id,
+            status="INVALID",
+            company_found=True,
+            message="Message does not contain minimum required information",
+            metadata={
+                "missing_fields": validation.missing_fields,
+                "errors": validation.errors
+            }
         )
 
     latency_ms = int((time.time() - start_time) * 1000)
