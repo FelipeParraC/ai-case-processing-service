@@ -1,6 +1,15 @@
 from app.infrastructure.database.session import engine, Base
-import app.infrastructure.database.models
-
+import time
 
 def init_db():
-    Base.metadata.create_all(bind=engine)
+
+    retries = 5
+
+    for i in range(retries):
+        try:
+            Base.metadata.create_all(bind=engine)
+            return
+        except Exception:
+            time.sleep(2)
+
+    raise Exception("Database connection failed")
