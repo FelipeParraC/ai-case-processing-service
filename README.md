@@ -37,6 +37,59 @@ El sistema recibe solicitudes de clientes en lenguaje natural y realiza automát
 
 ---
 
+# Instalación Rápida (Recomendado)
+
+Requisitos:
+
+- Docker
+- Docker Compose
+
+---
+
+## Paso 1 — Clonar el repositorio
+
+```bash
+git clone https://github.com/FelipeParraC/ai-case-processing-service.git
+
+cd ai-case-processing-service
+```
+
+## Paso 2 — Ejecutar script de setup automático
+
+```bash
+./setup.sh
+```
+Esto creará automáticamente:
+
+    .env
+    .env.docker
+
+## Paso 3 — Configurar GROQ_API_KEY
+Editar:
+
+    .env
+    .env.docker
+Cambiar:
+
+    GROQ_API_KEY=your_groq_api_key_here
+por tu API key real.
+
+Puedes obtener una en:
+
+https://console.groq.com
+
+## Paso 4 — Ejecutar el sistema
+
+```bash
+docker compose up --build
+```
+
+## Paso 5 — Acceder al Swagger UI
+
+    http://127.0.0.1:8000/docs
+
+---
+
 # Arquitectura
 
 Arquitectura basada en Clean Architecture:
@@ -90,58 +143,6 @@ Capas:
 
 - Docker
 - Docker Compose
-
----
-
-# Instalación Rápida (Recomendado)
-
-Requisitos:
-
-- Docker
-- Docker Compose
-
----
-
-## Paso 1 — Clonar el repositorio
-
-```bash
-git clone https://github.com/FelipeParraC/ai-case-processing-service.git
-
-cd ai-case-processing-service
-```
-
-## Paso 2 — Ejecutar script de setup automático
-
-```bash
-./setup.sh
-```
-Esto creará automáticamente:
-
-    .env
-    .env.docker
-
-## Paso 3 — Configurar GROQ_API_KEY
-Editar:
-
-    .env.docker
-Cambiar:
-
-    GROQ_API_KEY=your_groq_api_key_here
-por tu API key real.
-
-Puedes obtener una en:
-
-https://console.groq.com
-
-## Paso 4 — Ejecutar el sistema
-
-```bash
-docker compose up --build
-```
-
-## Paso 5 — Acceder al Swagger UI
-
-    http://127.0.0.1:8000/docs
 
 ---
 
