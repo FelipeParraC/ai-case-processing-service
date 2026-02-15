@@ -6,87 +6,102 @@ from app.core.config import settings
 
 
 DOCUMENT_PATTERNS = [
-    # CC explícito
-    (re.compile(r"\bCC\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])\b", re.IGNORECASE), "CC"),
-
-    # Cedula con palabra explícita
-    (re.compile(r"\bC[EÉ]DULA(?:\s+DE\s+CIUDADAN[IÍ]A)?\s*(?:ES|:)?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
-
-    # Numero de cedula
-    (re.compile(r"\bNUMERO\s+DE\s+C[EÉ]DULA\s*(?:ES|:)?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
-
-    # Documento
+    (re.compile(r"\bCC\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
+    (re.compile(r"\bC[EÉ]DULA\s*(?:ES|:)?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
     (re.compile(r"\bDOCUMENTO\s*(?:ES|:)?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
-
-    # TI
-    (re.compile(r"\bTI\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])\b", re.IGNORECASE), "TI"),
-
-    # CE
-    (re.compile(r"\bCE\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])\b", re.IGNORECASE), "CE"),
-
-    # NIT
-    (re.compile(r"\bNIT\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])\b", re.IGNORECASE), "NIT"),
-
-    # PASAPORTE
-    (re.compile(r"\bPASAPORTE\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])\b", re.IGNORECASE), "PASAPORTE"),
+    (re.compile(r"\bIDENTIFICACI[OÓ]N\s*(?:ES|:)?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CC"),
+    (re.compile(r"\bTI\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "TI"),
+    (re.compile(r"\bCE\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "CE"),
+    (re.compile(r"\bNIT\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "NIT"),
+    (re.compile(r"\bPASAPORTE\s*[:\-]?\s*([0-9][0-9\.\-\s]{4,30}[0-9])", re.IGNORECASE), "PASAPORTE"),
 ]
+
+
+VALID_TYPES = {"CC", "TI", "CE", "NIT", "PASAPORTE"}
 
 
 class ExtractionService:
 
     def __init__(self):
 
-        self.client = Groq(
-            api_key=settings.GROQ_API_KEY
-        )
-
+        self.client = Groq(api_key=settings.GROQ_API_KEY)
         self.model = settings.GROQ_MODEL
 
 
     def extract_document(self, text: str):
 
-        # 1. Intentar extracción regex robusta
+        # regex fast path
+        result = self._regex_extract(text)
+
+        if result:
+            return result
+
+        # LLM fallback
+        result = self._llm_extract(text)
+
+        if result:
+            return result
+
+        return {
+            "tipo_documento": "",
+            "numero_documento": ""
+        }
+
+
+    def _regex_extract(self, text: str):
+
         for pattern, tipo in DOCUMENT_PATTERNS:
 
             match = pattern.search(text)
 
             if match:
+
                 raw = match.group(1)
 
                 numero = re.sub(r"\D", "", raw)
 
                 if 5 <= len(numero) <= 15:
+
                     return {
                         "tipo_documento": tipo,
                         "numero_documento": numero,
                     }
 
-        # 2. fallback LLM
-        return self._llm_extract(text)
-
+        return None
 
 
     def _llm_extract(self, text: str):
-        prompt = f"""
-Tu tarea es extraer el tipo y número de documento de identidad desde el texto.
 
-Reglas:
-- Relaciona CC con cédula de ciudadanía o solo cédula, TI con tarjeta de identidad, CE con cédula de extranjería, NIT con número de identificación tributaria, PASAPORTE con pasaporte
-- Solo acepta tipos: CC, TI, CE, NIT, PASAPORTE
-- El numero_documento debe contener SOLO dígitos (0-9)
-- Si el texto no contiene un documento claro, devuelve ambos campos vacíos.
-- NO inventes números. NO uses ejemplos. NO completes con valores por defecto.
-- Responde SOLO un JSON válido, sin explicación, sin markdown.
+        prompt = f"""
+Extrae el documento de identidad del cliente desde el siguiente texto.
+
+Reglas importantes:
+
+- tipos válidos: CC, TI, CE, NIT, PASAPORTE
+- si el texto menciona "cédula", "cedula", "identificación", "documento", asume CC
+- el numero_documento debe contener SOLO dígitos
+- NO inventes números
+- NO uses ejemplos
+- responde SOLO JSON válido
 
 Texto:
 {text}
 
-Salida JSON (única respuesta posible):
+Formato de respuesta:
+
+{{
+  "tipo_documento": "CC",
+  "numero_documento": "12345678"
+}}
+
+Si no hay documento:
+
 {{
   "tipo_documento": "",
   "numero_documento": ""
 }}
 """
+
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": "user", "content": prompt}],
@@ -98,17 +113,19 @@ Salida JSON (única respuesta posible):
         try:
             data = json.loads(content)
         except Exception:
-            return {"tipo_documento": "", "numero_documento": ""}
+            return None
 
-        # hard validation: evitar que el modelo invente basura
         tipo = (data.get("tipo_documento") or "").upper().strip()
-        num = re.sub(r"\D", "", data.get("numero_documento") or "")
 
-        if tipo not in {"CC", "TI", "CE", "NIT", "PASAPORTE"}:
-            return {"tipo_documento": "", "numero_documento": ""}
+        numero = re.sub(r"\D", "", data.get("numero_documento") or "")
 
-        if not (5 <= len(num) <= 15):
-            return {"tipo_documento": "", "numero_documento": ""}
+        if tipo not in VALID_TYPES:
+            return None
 
-        return {"tipo_documento": tipo, "numero_documento": num}
+        if not (5 <= len(numero) <= 15):
+            return None
 
+        return {
+            "tipo_documento": tipo,
+            "numero_documento": numero,
+        }
