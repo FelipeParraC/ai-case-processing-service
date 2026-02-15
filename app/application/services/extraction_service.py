@@ -20,15 +20,25 @@ class ExtractionService:
         prompt = f"""
 Extrae el documento del cliente del siguiente texto.
 
-Texto:
-{text}
+REGLAS:
 
-Responde SOLO en JSON:
+- Si encuentras un documento, extrae:
+  tipo_documento: CC, CE, NIT o PASAPORTE
+  numero_documento: el número exacto
+
+- Si NO hay documento en el texto, devuelve campos vacíos.
+
+Responde SOLO en JSON válido.
+
+Formato de respuesta:
 
 {{
-  "tipo_documento": "CC",
-  "numero_documento": "string"
+  "tipo_documento": "",
+  "numero_documento": ""
 }}
+
+Texto:
+{text}
 """
 
         response = self.client.chat.completions.create(
@@ -42,6 +52,21 @@ Responde SOLO en JSON:
             temperature=0
         )
 
-        content = response.choices[0].message.content
+        content = response.choices[0].message.content.strip()
 
-        return json.loads(content)
+        try:
+            data = json.loads(content)
+
+            return {
+                "tipo_documento": data.get("tipo_documento", "") or "",
+                "numero_documento": data.get("numero_documento", "") or "",
+            }
+
+        except Exception:
+
+            # fallback seguro production-grade
+            return {
+                "tipo_documento": "",
+                "numero_documento": ""
+            }
+
