@@ -24,6 +24,10 @@ class Settings(BaseSettings):
     GROQ_API_KEY: str
     GROQ_MODEL: str = "llama-3.1-8b-instant"
 
+    PLATFORM_FAILURE_RATE: float = 0.0
+    PLATFORM_LATENCY_MIN_MS: int = 200
+    PLATFORM_LATENCY_MAX_MS: int = 1200
+
     @property
     def DATABASE_URL(self) -> str:
         return (
