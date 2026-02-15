@@ -57,6 +57,7 @@ cd ai-case-processing-service
 ## Paso 2 — Ejecutar script de setup automático
 
 ```bash
+chmod +x ./setup.sh
 ./setup.sh
 ```
 Esto creará automáticamente:
