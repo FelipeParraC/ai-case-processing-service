@@ -1,29 +1,62 @@
 from fastapi import APIRouter
+from pydantic import BaseModel
+import random
 
-router = APIRouter(prefix="/mock", tags=["Mock Services"])
+router = APIRouter(prefix="/mock/mensajeria-del-valle", tags=["Mock Services"])
 
-@router.post("/mensajeria-del-valle/prioridad")
-def prioridad_mensajeria_del_valle(payload: dict):
-    """
-    Simula un servicio externo real que retorna prioridad.
-    Recibe (por ejemplo):
-      - tipo_documento
-      - numero_documento_cliente
-      - tipo_solicitud
-      - descripcion
-    """
 
-    descripcion = (payload.get("descripcion") or "").lower()
-    tipo_solicitud = (payload.get("tipo_solicitud") or "").lower()
+class PriorityRequest(BaseModel):
 
-    # regla mock sencilla (puedes sofisticarla)
-    if any(k in descripcion for k in ["robo", "perdido", "urgente", "nunca llegó", "nunca llego", "fuga", "peligroso"]):
-        return {"prioridad": "Alta", "reason": "Palabras clave críticas detectadas por servicio externo."}
+    tipo_documento: str
+    numero_documento_cliente: str
+    tipo_solicitud: str
 
-    if "retraso" in descripcion or "demora" in descripcion or "tarde" in descripcion:
-        return {"prioridad": "Media", "reason": "Retraso detectado por servicio externo."}
 
-    if "consulta" in tipo_solicitud or "información" in descripcion or "informacion" in descripcion:
-        return {"prioridad": "Baja", "reason": "Caso informativo detectado por servicio externo."}
+class PriorityResponse(BaseModel):
 
-    return {"prioridad": "Media", "reason": "Prioridad por defecto del servicio externo."}
+    prioridad: str
+    reason: str
+
+
+@router.post("/prioridad", response_model=PriorityResponse)
+def determinar_prioridad(req: PriorityRequest):
+
+    tipo = req.tipo_solicitud.lower()
+
+    numero = req.numero_documento_cliente
+
+    # Regla 1 — Incidentes críticos
+    if any(word in tipo for word in ["robo", "perdido", "nunca llegó", "extraviado"]):
+
+        return PriorityResponse(
+            prioridad="Alta",
+            reason="Incidente crítico de entrega."
+        )
+
+    # Regla 2 — Clientes VIP simulados
+    if numero.endswith("999"):
+
+        return PriorityResponse(
+            prioridad="Alta",
+            reason="Cliente VIP."
+        )
+
+    # Regla 3 — Consultas
+    if any(word in tipo for word in ["consulta", "información"]):
+
+        return PriorityResponse(
+            prioridad="Baja",
+            reason="Consulta informativa."
+        )
+
+    # Regla 4 — Default con ligera variabilidad
+    prioridad = random.choices(
+        ["Media", "Media", "Media", "Alta", "Baja"],
+        weights=[60, 10, 10, 10, 10],
+        k=1
+    )[0]
+
+    return PriorityResponse(
+        prioridad=prioridad,
+        reason="Prioridad determinada por reglas del sistema externo."
+    )
