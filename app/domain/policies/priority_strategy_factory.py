@@ -1,14 +1,20 @@
-from app.domain.interfaces.priority_strategy import PriorityStrategy
 from app.domain.policies.rule_based_priority_strategy import (
     RuleBasedPriorityStrategy
 )
+from app.domain.policies.external_priority_strategy import (
+    ExternalPriorityStrategy
+)
+
 
 
 class PriorityStrategyFactory:
 
     @staticmethod
-    def get_strategy(company_code: str) -> PriorityStrategy:
+    def get_strategy(self, company_name: str):
 
-        # aquí luego podremos agregar estrategias por empresa
+        if company_name.upper() == "MENSAJERIA DEL VALLE":
 
-        return RuleBasedPriorityStrategy()
+            return ExternalPriorityStrategy()
+
+        return RuleBasedPriorityStrategy(self.db)
+
