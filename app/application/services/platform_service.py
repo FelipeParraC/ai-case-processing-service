@@ -1,37 +1,22 @@
-from app.infrastructure.connectors.mock_platform_connector import (
-    MockPlatformConnector,
-)
-
-from app.domain.models.external_case_result import ExternalCaseResult
-
+from app.infrastructure.connectors.mock_platform_connector import MockPlatformConnector, ExternalPlatformError
+from app.core.config import settings
 
 class PlatformService:
-
     def __init__(self):
-
         self.connector = MockPlatformConnector()
 
+    def create_case(self, company: str, case_type: str, priority: str, message: str):
+        attempts = settings.PLATFORM_RETRY_MAX_ATTEMPTS
 
-    def create_case(
-        self,
-        compania: str,
-        case_type: str,
-        priority: str,
-        message: str,
-    ) -> ExternalCaseResult:
+        last_error = None
+        for attempt in range(1, attempts + 1):
+            try:
+                return self.connector.create_case(company, case_type, priority, message)
+            except ExternalPlatformError as e:
+                last_error = str(e)
+                # aquí puedes loggear con logger JSON si ya lo tienes
+                if attempt == attempts:
+                    break
 
-        try:
-
-            result = self.connector.create_case(
-                compania,
-                case_type,
-                priority,
-                message
-            )
-
-            return result
-
-        except Exception:
-
-            return None
-
+        # ✅ fallback sin reventar endpoint
+        return None

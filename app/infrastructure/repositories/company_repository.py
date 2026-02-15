@@ -1,5 +1,5 @@
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import select, func
 
 from app.infrastructure.database.models import Company
 
@@ -7,22 +7,33 @@ from app.infrastructure.database.models import Company
 class CompanyRepository:
 
     def __init__(self, db: Session):
-
         self.db = db
 
 
-    def get_by_name_or_code(self, name_or_code: str) -> Company | None:
+    # ===============================
+    # Buscar por ID (usado en PriorityService)
+    # ===============================
 
-        return (
+    def get_by_id(self, company_id):
 
-            self.db.query(Company)
-
-            .filter(
-                or_(
-                    Company.nombre == name_or_code
-                )
-            )
-
-            .first()
-
+        stmt = select(Company).where(
+            Company.id == company_id
         )
+
+        return self.db.execute(stmt).scalar_one_or_none()
+
+
+    # ===============================
+    # Buscar por nombre o código
+    # (usado en endpoint principal)
+    # ===============================
+
+    def get_by_name_or_code(self, value: str):
+
+        normalized = value.strip().upper()
+
+        stmt = select(Company).where(
+            func.upper(Company.nombre) == normalized
+        )
+
+        return self.db.execute(stmt).scalar_one_or_none()

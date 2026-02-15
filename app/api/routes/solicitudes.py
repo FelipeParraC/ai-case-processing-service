@@ -100,15 +100,17 @@ def procesar_solicitud(
         validation.cleaned_message
     )
 
-    priority = PriorityService(db).determine_priority(
-        company.id,
-        validation.cleaned_message,
-        classification.case_type
-    )
-
     extraction = ExtractionService().extract_document(
         validation.cleaned_message
     )
+
+    priority = PriorityService(db).determine_priority(
+        company_id=company.id,
+        message=validation.cleaned_message,
+        case_type=classification.case_type,
+        extracted=extraction,
+    )
+
 
     next_step = NextStepPolicy(db).determine_next_step(
         company.id,

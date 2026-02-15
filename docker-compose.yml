@@ -1,9 +1,11 @@
-
 services:
 
   db:
     image: postgres:16
     container_name: ai_cases_db
+
+    env_file:
+      - .env.docker
 
     environment:
       POSTGRES_DB: ai_cases
@@ -25,12 +27,14 @@ services:
 
   api:
     build: .
-
     container_name: ai_cases_api
 
     depends_on:
       db:
         condition: service_healthy
+
+    env_file:
+      - .env.docker
 
     environment:
       POSTGRES_HOST: db
@@ -38,9 +42,6 @@ services:
       POSTGRES_DB: ai_cases
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-
-      GROQ_API_KEY: ${GROQ_API_KEY}
-      GROQ_MODEL: llama-3.1-8b-instant
 
     ports:
       - "8000:8000"

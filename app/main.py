@@ -10,6 +10,7 @@ from app.infrastructure.database.init_db import init_db
 from app.infrastructure.database.session import engine
 
 from app.api.routes import solicitudes
+from app.api.routes import mock_services
 
 
 # Lifespan handler moderno
@@ -38,6 +39,7 @@ app.add_middleware(RequestTracingMiddleware)
 
 # Routers
 app.include_router(solicitudes.router)
+app.include_router(mock_services.router)
 
 
 # Exception handlers
