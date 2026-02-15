@@ -10,33 +10,29 @@ class RuleRepository:
         self.db = db
 
 
-    def get_active_rules(self, company_id, rule_type=None):
+    def get_rules_for_company(
+        self,
+        company_id,
+    ) -> list[Rule]:
 
         stmt = select(Rule).where(
-            Rule.company_id == company_id,
-            Rule.is_active == True
+            Rule.compania_id == company_id
         )
 
-        if rule_type:
-            stmt = stmt.where(Rule.rule_type == rule_type)
-
-        result = self.db.execute(stmt)
-
-        return result.scalars().all()
-
-
-    def create(self, company_id, rule_type, config):
-
-        rule = Rule(
-            company_id=company_id,
-            rule_type=rule_type,
-            config=config
+        return list(
+            self.db.execute(stmt).scalars().all()
         )
 
-        self.db.add(rule)
 
-        self.db.commit()
+    def get_rule_by_case_type(
+        self,
+        company_id,
+        case_type: str,
+    ) -> Rule | None:
 
-        self.db.refresh(rule)
+        stmt = select(Rule).where(
+            Rule.compania_id == company_id,
+            Rule.case_type == case_type,
+        )
 
-        return rule
+        return self.db.execute(stmt).scalar_one_or_none()

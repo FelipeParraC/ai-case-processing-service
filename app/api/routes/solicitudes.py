@@ -100,8 +100,8 @@ def procesar_solicitud(
         validation.cleaned_message
     )
 
-    priority = PriorityService().determine_priority(
-        request.compania,
+    priority = PriorityService(db).determine_priority(
+        company.id,
         validation.cleaned_message,
         classification.case_type
     )
@@ -110,14 +110,16 @@ def procesar_solicitud(
         validation.cleaned_message
     )
 
-    next_step = NextStepPolicy().determine_next_step(
-        priority.level,
-        classification.case_type
+    next_step = NextStepPolicy(db).determine_next_step(
+        company.id,
+        classification.case_type,
+        priority.level
     )
+
 
     external_case = None
 
-    if next_step.action == "CREATE_EXTERNAL_CASE":
+    if next_step.action == "GESTION_EXTERNA":
 
         external_case = PlatformService().create_case(
             request.compania,

@@ -1,6 +1,10 @@
 from sqlalchemy.orm import Session
 
-from app.infrastructure.database.models import Company, Category, Rule
+from app.infrastructure.database.models import (
+    Company,
+    Category,
+    Rule,
+)
 
 
 def seed_database(db: Session):
@@ -31,12 +35,12 @@ def seed_database(db: Session):
                         "riesgo"
                     ],
 
-                    "priority": "HIGH",
+                    "priority": "Alta",
 
-                    "next_step": "CREATE_EXTERNAL_CASE",
+                    "next_step": "GESTION_EXTERNA",
 
                     "justification_template":
-                        "Se detecta falla técnica en estufa de gas que requiere intervención presencial (delegación externa)."
+                        "Se detecta falla técnica en estufa de gas que requiere intervención externa."
                 },
 
                 {
@@ -48,9 +52,9 @@ def seed_database(db: Session):
                         "pregunta"
                     ],
 
-                    "priority": "LOW",
+                    "priority": "Baja",
 
-                    "next_step": "QUEUE_FOR_REVIEW",
+                    "next_step": "RESPUESTA_DIRECTA",
 
                     "justification_template":
                         "Solicitud informativa que puede resolverse internamente."
@@ -80,9 +84,9 @@ def seed_database(db: Session):
                         "retraso"
                     ],
 
-                    "priority": "MEDIUM",
+                    "priority": "Media",
 
-                    "next_step": "QUEUE_FOR_REVIEW",
+                    "next_step": "RESPUESTA_DIRECTA",
 
                     "justification_template":
                         "Incidente relacionado con logística de entrega."
@@ -93,17 +97,18 @@ def seed_database(db: Session):
 
     ]
 
+
     for company_data in companies_data:
 
         nombre = company_data["nombre"]
 
-        existing = db.query(Company).filter_by(nombre=nombre).first()
+        company = (
+            db.query(Company)
+            .filter_by(nombre=nombre)
+            .first()
+        )
 
-        if existing:
-
-            company = existing
-
-        else:
+        if not company:
 
             company = Company(
                 nombre=nombre
@@ -113,7 +118,8 @@ def seed_database(db: Session):
 
             db.flush()
 
-        # Categories
+
+        # ---------- Categories ----------
 
         for category_name in company_data["categories"]:
 
@@ -136,7 +142,8 @@ def seed_database(db: Session):
 
                 db.add(category)
 
-        # Rules
+
+        # ---------- Rules ----------
 
         for rule_data in company_data["rules"]:
 
@@ -149,25 +156,27 @@ def seed_database(db: Session):
                 .first()
             )
 
-            if not exists_rule:
+            if exists_rule:
+                continue
 
-                rule = Rule(
 
-                    compania_id=company.id,
+            rule = Rule(
 
-                    case_type=rule_data["case_type"],
+                compania_id=company.id,
 
-                    keywords=rule_data["keywords"],
+                case_type=rule_data["case_type"],
 
-                    priority=rule_data["priority"],
+                keywords=rule_data["keywords"],
 
-                    next_step=rule_data["next_step"],
+                priority=rule_data["priority"],
 
-                    justification_template=
-                        rule_data["justification_template"]
-                )
+                next_step=rule_data["next_step"],
 
-                db.add(rule)
+                justification_template=rule_data["justification_template"]
+            )
+
+            db.add(rule)
+
 
     db.commit()
 

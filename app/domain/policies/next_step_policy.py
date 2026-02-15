@@ -1,30 +1,33 @@
+from app.infrastructure.repositories.rule_repository import RuleRepository
 from app.domain.models.next_step_result import NextStepResult
 
 
 class NextStepPolicy:
 
+    def __init__(self, db):
+        self.rule_repo = RuleRepository(db)
+
+
     def determine_next_step(
         self,
-        priority_level: str,
-        classification: str,
-        metadata: dict | None = None,
+        company_id,
+        case_type: str,
+        priority_level: str
     ) -> NextStepResult:
 
-        if priority_level == "HIGH":
+        rule = self.rule_repo.get_rule_by_case_type(
+            company_id,
+            case_type
+        )
+
+        if rule and rule.next_step:
 
             return NextStepResult(
-                action="ESCALATE_IMMEDIATELY",
-                reason="High priority case requires immediate escalation"
-            )
-
-        if priority_level == "MEDIUM":
-
-            return NextStepResult(
-                action="CREATE_EXTERNAL_CASE",
-                reason="Medium priority case should be processed externally"
+                action=rule.next_step,
+                reason=f"Configurado en Rule DB para case_type='{case_type}'"
             )
 
         return NextStepResult(
-            action="QUEUE_FOR_REVIEW",
-            reason="Low priority case queued for manual review"
+            action="RESPUESTA_DIRECTA",
+            reason="Fallback default policy"
         )
