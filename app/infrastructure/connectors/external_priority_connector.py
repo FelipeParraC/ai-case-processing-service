@@ -7,7 +7,7 @@ class ExternalPriorityConnector:
         self.timeout = settings.EXTERNAL_PRIORITY_TIMEOUT_S
 
     def get_priority(self, tipo_documento: str, numero_documento: str, tipo_solicitud: str, descripcion: str) -> dict:
-        url = f"{self.base_url}/mock/mensajeria-del-valle/prioridad"
+        url = f"{self.base_url}/mock/prioridad"
 
         payload = {
             "tipo_documento": tipo_documento,

@@ -1,11 +1,13 @@
 from sqlalchemy.orm import Session
 
-from app.infrastructure.repositories.category_repository import CategoryRepository
-from app.infrastructure.repositories.rule_repository import RuleRepository
+from app.infrastructure.repositories.categoria_repository import CategoriaRepository
+from app.infrastructure.repositories.regla_repository import ReglaRepository
 
 from app.infrastructure.llm.llm_adapter import GroqLLMClient
 
 from app.domain.models.llm_classification_result import LLMClassificationResult
+
+from app.application.services.solicitud_validation_service import SolicitudValidationService
 
 
 class ClassificationService:
@@ -14,61 +16,169 @@ class ClassificationService:
 
         self.db = db
 
-        self.category_repo = CategoryRepository(db)
+        self.categoria_repo = CategoriaRepository(db)
 
-        self.rule_repo = RuleRepository(db)
+        self.regla_repo = ReglaRepository(db)
 
         self.llm = GroqLLMClient()
 
 
     def classify(
         self,
-        company_id,
+        compania_id,
         message
     ) -> LLMClassificationResult:
 
-        # Obtener categorías válidas desde DB
-        categories = self.category_repo.get_by_company(company_id)
 
-        category_names = [c.name for c in categories]
+        # =====================================
+        # VALIDACIÓN
+        # =====================================
+
+        is_valid, reason = SolicitudValidationService.validate_message(message)
+
+        if not is_valid:
+
+            return LLMClassificationResult(
+
+                case_type="INVALIDO",
+
+                justification=f"Solicitud inválida: {reason}",
+
+                confidence=0.0
+            )
 
 
-        # Clasificación vía LLM
+        # =====================================
+        # OBTENER CATEGORIAS
+        # =====================================
+
+        categorias = self.categoria_repo.get_by_compania(compania_id)
+
+        nombres_categorias = [c.nombre for c in categorias]
+
+
+        # =====================================
+        # LLM CLASIFICATION
+        # =====================================
+
         llm_result = self.llm.classify_case(
             message,
-            category_names
-        )
-
-        case_type = llm_result.case_type
-
-
-        # Obtener regla desde DB
-        rule = self.rule_repo.get_rule_by_case_type(
-            company_id,
-            case_type
+            nombres_categorias
         )
 
 
-        # Justificación SIEMPRE desde DB si existe
-        if rule and rule.justification_template:
+        confidence = getattr(llm_result, "confidence", 0.0)
 
-            justification = rule.justification_template
 
-        else:
+        is_valid_conf, conf_reason = SolicitudValidationService.validate_classification(
+            confidence
+        )
 
-            justification = llm_result.justification
+        if not is_valid_conf:
+
+            return LLMClassificationResult(
+
+                case_type="INVALIDO",
+
+                justification=f"Solicitud inválida: {conf_reason}",
+
+                confidence=confidence
+            )
+
+
+        tipo_caso = llm_result.case_type
+
+
+        # =====================================
+        # OBTENER REGLA
+        # =====================================
+
+        regla = self.regla_repo.get_regla_by_tipo_caso(
+            compania_id,
+            tipo_caso
+        )
+
+
+        # =====================================
+        # GENERAR JUSTIFICACIÓN DINÁMICA
+        # =====================================
+
+        justificacion = self._generate_justification(
+
+            message=message,
+
+            tipo_caso=tipo_caso,
+
+            regla=regla,
+
+            fallback=llm_result.justification
+        )
 
 
         return LLMClassificationResult(
 
-            case_type=case_type,
+            case_type=tipo_caso,
 
-            justification=justification,
+            justification=justificacion,
 
-            confidence=(
-                llm_result.confidence
-                if hasattr(llm_result, "confidence")
-                else 0.9
-            )
-
+            confidence=confidence
         )
+
+
+    def _generate_justification(
+        self,
+        message,
+        tipo_caso,
+        regla,
+        fallback
+    ):
+
+
+        if not regla:
+
+            return fallback
+
+
+        prompt = f"""
+Eres un analista de solicitudes.
+
+Tipo de caso:
+{tipo_caso}
+
+Prioridad definida por reglas:
+{regla.prioridad}
+
+Palabras clave de la regla:
+{regla.palabras_clave}
+
+Mensaje del cliente:
+{message}
+
+Redacta una justificación corta en español explicando por qué este caso tiene esa prioridad.
+
+No inventes información.
+Usa el mensaje real.
+Máximo 20 palabras.
+"""
+
+
+        response = self.llm.client.chat.completions.create(
+
+            model=self.llm.model,
+
+            messages=[
+                {
+                    "role": "system",
+                    "content": "Eres un analista profesional. Responde solo en español."
+                },
+                {
+                    "role": "user",
+                    "content": prompt
+                }
+            ],
+
+            temperature=0
+        )
+
+
+        return response.choices[0].message.content.strip()

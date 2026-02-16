@@ -91,10 +91,10 @@ Formato de respuesta:
 
 {{
   "tipo_documento": "CC",
-  "numero_documento": "12345678"
+  "numero_documento": "el número extraído sin puntos ni guiones"
 }}
 
-Si no hay documento:
+Si no hay documento, no inventes, responde el mismo formato pero con campos vacíos:
 
 {{
   "tipo_documento": "",

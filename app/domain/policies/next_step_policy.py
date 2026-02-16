@@ -1,33 +1,37 @@
-from app.infrastructure.repositories.rule_repository import RuleRepository
+from sqlalchemy.orm import Session
+
 from app.domain.models.next_step_result import NextStepResult
+from app.infrastructure.repositories.regla_repository import ReglaRepository
 
 
 class NextStepPolicy:
 
-    def __init__(self, db):
-        self.rule_repo = RuleRepository(db)
+    def __init__(self, db: Session):
+
+        self.db = db
+        self.regla_repo = ReglaRepository(db)
 
 
     def determine_next_step(
         self,
-        company_id,
-        case_type: str,
-        priority_level: str
+        compania_id,
+        tipo_caso: str,
+        prioridad: str,
     ) -> NextStepResult:
 
-        rule = self.rule_repo.get_rule_by_case_type(
-            company_id,
-            case_type
+        regla = self.regla_repo.get_regla_by_tipo_caso(
+            compania_id,
+            tipo_caso
         )
 
-        if rule and rule.next_step:
+        if regla and regla.siguiente_paso:
 
             return NextStepResult(
-                action=rule.next_step,
-                reason=f"Configurado en Rule DB para case_type='{case_type}'"
+                action=regla.siguiente_paso,
+                reason="Definido por regla de negocio."
             )
 
         return NextStepResult(
             action="RESPUESTA_DIRECTA",
-            reason="Fallback default policy"
+            reason="Caso manejable internamente."
         )

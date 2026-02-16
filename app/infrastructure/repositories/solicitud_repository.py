@@ -1,7 +1,8 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 
-from app.infrastructure.database.models import SolicitudRecord
+from app.core.json_utils import to_json_serializable
+from app.infrastructure.database.models import Solicitud
 
 
 class SolicitudRepository:
@@ -9,44 +10,50 @@ class SolicitudRepository:
     def __init__(self, db: Session):
         self.db = db
 
+    # ===============================
+    # Obtener solicitud (idempotencia)
+    # ===============================
 
     def get(
         self,
-        company_id,
-        solicitud_id: str
-    ) -> SolicitudRecord | None:
+        compania_id,
+        solicitud_id: str,
+    ) -> Solicitud | None:
 
-        stmt = select(SolicitudRecord).where(
-            SolicitudRecord.company_id == company_id,
-            SolicitudRecord.solicitud_id == solicitud_id,
+        stmt = select(Solicitud).where(
+            Solicitud.compania_id == compania_id,
+            Solicitud.solicitud_id == solicitud_id,
         )
 
         return self.db.execute(stmt).scalar_one_or_none()
 
+    # ===============================
+    # Crear solicitud
+    # ===============================
 
     def create(
         self,
-        company_id,
-        solicitud_id,
-        request_id,
-        status,
-        external_case_id,
-        response_json,
-    ) -> SolicitudRecord:
+        compania_id,
+        solicitud_id: str,
+        id_request: str,
+        estado: str,
+        id_caso_externo: str | None,
+        respuesta_json: dict,
+    ) -> Solicitud:
 
-        record = SolicitudRecord(
-            company_id=company_id,
+        solicitud = Solicitud(
+            compania_id=compania_id,
             solicitud_id=solicitud_id,
-            request_id=request_id,
-            status=status,
-            external_case_id=external_case_id,
-            response_json=response_json,
+            id_request=id_request,
+            estado=estado,
+            id_caso_externo=id_caso_externo,
+            respuesta_json=to_json_serializable(respuesta_json),
         )
 
-        self.db.add(record)
+        self.db.add(solicitud)
 
         self.db.commit()
 
-        self.db.refresh(record)
+        self.db.refresh(solicitud)
 
-        return record
+        return solicitud

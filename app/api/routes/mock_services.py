@@ -2,7 +2,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 import random
 
-router = APIRouter(prefix="/mock/mensajeria-del-valle", tags=["Mock Services"])
+router = APIRouter(prefix="/mock", tags=["Mock Services"])
 
 
 class PriorityRequest(BaseModel):

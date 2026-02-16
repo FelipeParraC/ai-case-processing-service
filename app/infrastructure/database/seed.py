@@ -1,62 +1,59 @@
 from sqlalchemy.orm import Session
 
 from app.infrastructure.database.models import (
-    Company,
-    Category,
-    Rule,
+    Compania,
+    Categoria,
+    Regla,
 )
 
 
 def seed_database(db: Session):
 
-    companies_data = [
+    companias_data = [
 
         {
             "nombre": "GASES DEL ORINOCO",
 
-            "categories": [
+            "usa_servicio_prioridad_externo": False,
+
+            "categorias": [
                 "Incidente técnico",
                 "Consulta",
                 "Queja",
                 "Solicitud administrativa",
             ],
 
-            "rules": [
+            "reglas": [
 
                 {
-                    "case_type": "Incidente técnico",
+                    "tipo_caso": "Incidente técnico",
 
-                    "keywords": [
-                        "estufa",
-                        "gas",
-                        "falla",
-                        "no funciona",
-                        "urgente",
-                        "riesgo"
+                    "palabras_clave": [
+                        "estufa"
                     ],
 
-                    "priority": "Alta",
+                    "prioridad": "Alta",
 
-                    "next_step": "GESTION_EXTERNA",
+                    "siguiente_paso": "GESTION_EXTERNA",
 
-                    "justification_template":
+                    "plantilla_justificacion":
                         "Se detecta falla técnica en estufa de gas que requiere intervención externa."
                 },
 
                 {
-                    "case_type": "Consulta",
+                    "tipo_caso": "Consulta",
 
-                    "keywords": [
+                    "palabras_clave": [
                         "consulta",
                         "información",
                         "pregunta"
                     ],
 
-                    "priority": "Baja",
+                    "prioridad": "Baja",
 
-                    "next_step": "RESPUESTA_DIRECTA",
+                    "siguiente_paso": "RESPUESTA_DIRECTA",
 
-                    "justification_template":
+                    "plantilla_justificacion":
                         "Solicitud informativa que puede resolverse internamente."
                 }
 
@@ -66,29 +63,31 @@ def seed_database(db: Session):
         {
             "nombre": "MENSAJERIA DEL VALLE",
 
-            "categories": [
+            "usa_servicio_prioridad_externo": True,
+
+            "categorias": [
                 "Problema de entrega",
                 "Consulta",
                 "Queja",
             ],
 
-            "rules": [
+            "reglas": [
 
                 {
-                    "case_type": "Problema de entrega",
+                    "tipo_caso": "Problema de entrega",
 
-                    "keywords": [
+                    "palabras_clave": [
                         "entrega",
                         "paquete",
                         "no llegó",
                         "retraso"
                     ],
 
-                    "priority": "Media",
+                    "prioridad": "Media",
 
-                    "next_step": "RESPUESTA_DIRECTA",
+                    "siguiente_paso": "GESTION_EXTERNA",
 
-                    "justification_template":
+                    "plantilla_justificacion":
                         "Incidente relacionado con logística de entrega."
                 }
 
@@ -98,84 +97,96 @@ def seed_database(db: Session):
     ]
 
 
-    for company_data in companies_data:
+    for compania_data in companias_data:
 
-        nombre = company_data["nombre"]
-
-        company = (
-            db.query(Company)
-            .filter_by(nombre=nombre)
+        compania = (
+            db.query(Compania)
+            .filter_by(nombre=compania_data["nombre"])
             .first()
         )
 
-        if not company:
+        if not compania:
 
-            company = Company(
-                nombre=nombre
+            compania = Compania(
+                nombre=compania_data["nombre"],
+                usa_servicio_prioridad_externo=compania_data.get(
+                    "usa_servicio_prioridad_externo",
+                    False
+                )
             )
 
-            db.add(company)
+            db.add(compania)
 
             db.flush()
 
+        else:
 
-        # ---------- Categories ----------
+            # actualizar flag si cambió
+            compania.usa_servicio_prioridad_externo = compania_data.get(
+                "usa_servicio_prioridad_externo",
+                False
+            )
 
-        for category_name in company_data["categories"]:
 
-            exists_category = (
-                db.query(Category)
+        # ============================================
+        # Categorías
+        # ============================================
+
+        for categoria_nombre in compania_data["categorias"]:
+
+            existe = (
+                db.query(Categoria)
                 .filter_by(
-                    company_id=company.id,
-                    name=category_name
+                    compania_id=compania.id,
+                    nombre=categoria_nombre
                 )
                 .first()
             )
 
-            if not exists_category:
+            if not existe:
 
-                category = Category(
-                    company_id=company.id,
-                    name=category_name,
-                    is_active=True
+                db.add(
+                    Categoria(
+                        compania_id=compania.id,
+                        nombre=categoria_nombre,
+                        activa=True
+                    )
                 )
 
-                db.add(category)
 
+        # ============================================
+        # Reglas
+        # ============================================
 
-        # ---------- Rules ----------
+        for regla_data in compania_data["reglas"]:
 
-        for rule_data in company_data["rules"]:
-
-            exists_rule = (
-                db.query(Rule)
+            existe = (
+                db.query(Regla)
                 .filter_by(
-                    compania_id=company.id,
-                    case_type=rule_data["case_type"]
+                    compania_id=compania.id,
+                    tipo_caso=regla_data["tipo_caso"]
                 )
                 .first()
             )
 
-            if exists_rule:
+            if existe:
                 continue
 
+            db.add(
+                Regla(
+                    compania_id=compania.id,
 
-            rule = Rule(
+                    tipo_caso=regla_data["tipo_caso"],
 
-                compania_id=company.id,
+                    palabras_clave=regla_data["palabras_clave"],
 
-                case_type=rule_data["case_type"],
+                    prioridad=regla_data["prioridad"],
 
-                keywords=rule_data["keywords"],
+                    siguiente_paso=regla_data["siguiente_paso"],
 
-                priority=rule_data["priority"],
-
-                next_step=rule_data["next_step"],
-
-                justification_template=rule_data["justification_template"]
+                    plantilla_justificacion=regla_data["plantilla_justificacion"],
+                )
             )
-
-            db.add(rule)
 
 
     db.commit()

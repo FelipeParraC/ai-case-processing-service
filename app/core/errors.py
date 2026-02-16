@@ -3,7 +3,7 @@ from fastapi.responses import JSONResponse
 from fastapi.exceptions import HTTPException
 from starlette.status import HTTP_500_INTERNAL_SERVER_ERROR
 
-from app.core.logging import get_logger
+from app.core.logger import get_logger
 from app.api.schemas.error_response import ErrorResponse
 
 

@@ -155,7 +155,8 @@ POST
 
     /solicitudes/procesar
 
-Request:
+
+### Request
 
 ```json
 {
@@ -163,39 +164,268 @@ Request:
   "solicitud_id": "REQ-001",
   "solicitud_descripcion": "Mi CC es 123456789. La estufa tiene fuga de gas."
 }
+````
+
+### Response
+
+```json
+{
+  "compania": "GASES DEL ORINOCO",
+  "solicitud_id": "REQ-001",
+  "solicitud_fecha": "2026-02-16",
+  "solicitud_tipo": "Incidente técnico",
+  "solicitud_prioridad": "Alta",
+  "solicitud_id_cliente": "123456789",
+  "solicitud_tipo_id_cliente": "CC",
+  "solicitud_id_plataforma_externa": "UUID-EXTERNO",
+  "proximo_paso": "GESTION_EXTERNA",
+  "justificacion": "El cliente reporta una falla técnica que requiere atención externa.",
+  "estado": "pendiente"
+}
+```
+
+---
+
+## Características soportadas
+
+* Clasificación automática con LLM
+* Priorización automática basada en reglas
+* Integración con plataforma externa de prioridad
+* Extracción automática de documento del cliente
+* Idempotencia garantizada
+* Logging completo en base de datos
+* Validación contra mensajes maliciosos
+* Arquitectura basada en reglas dinámicas
+
+---
+
+## Idempotencia
+
+Si se envía nuevamente una solicitud con el mismo:
+
+* compania
+* solicitud_id
+
+El sistema retornará la misma respuesta sin reprocesar.
+
+Header incluido:
+
+```
+X-Idempotent-Replay: true
+```
+
+---
+
+# Endpoints Administrativos
+
+Permiten gestionar compañías, categorías, reglas, solicitudes y logs.
+
+Base path:
+
+```
+/admin
+```
+
+---
+
+## Compañías
+
+### Obtener todas las compañías
+
+GET
+
+```
+/admin/companias
+```
+
+### Crear compañía
+
+POST
+
+```
+/admin/companias
+```
+
+Request:
+
+```json
+{
+  "nombre": "NUEVA EMPRESA",
+  "usa_servicio_prioridad_externo": true,
+  "activa": true
+}
+```
+
+---
+
+## Categorías
+
+### Obtener todas las categorías
+
+GET
+
+```
+/admin/categorias
+```
+
+### Crear categoría
+
+POST
+
+```
+/admin/categorias
+```
+
+Request:
+
+```json
+{
+  "compania_id": "UUID",
+  "nombre": "Incidente técnico",
+  "descripcion": "Problemas técnicos reportados por clientes",
+  "activa": true
+}
+```
+
+---
+
+## Reglas
+
+### Obtener todas las reglas
+
+GET
+
+```
+/admin/reglas
+```
+
+### Crear regla
+
+POST
+
+```
+/admin/reglas
+```
+
+Request:
+
+```json
+{
+  "compania_id": "UUID",
+  "tipo_caso": "Incidente técnico",
+  "palabras_clave": ["estufa", "fuga", "gas"],
+  "prioridad": "Alta",
+  "siguiente_paso": "GESTION_EXTERNA",
+  "plantilla_justificacion": "Se detecta falla técnica que requiere intervención externa."
+}
+```
+
+---
+
+## Solicitudes
+
+### Obtener todas las solicitudes procesadas
+
+GET
+
+```
+/admin/solicitudes
+```
+
+---
+
+## Logs
+
+### Obtener logs de solicitudes
+
+GET
+
+```
+/admin/logs
+```
+
+Incluye:
+
+* request_id
+* estado
+* latencia
+* errores
+* timestamp
+
+---
+
+## Health Check
+
+Permite verificar el estado del microservicio.
+
+---
+
+### Prueba Live
+
+GET
+
+```
+/health/live
 ```
 
 Response:
 
 ```json
 {
-  "compania": "GASES DEL ORINOCO",
-  "solicitud_id": "REQ-001",
-  "solicitud_fecha": "2026-02-15",
-  "solicitud_tipo": "Incidente técnico",
-  "solicitud_prioridad": "Alta",
-  "solicitud_id_cliente": "123456789",
-  "solicitud_tipo_id_cliente": "CC",
-  "solicitud_id_plataforma_externa": "GASES DEL ORINOCO-UUID",
-  "proximo_paso": "GESTION_EXTERNA",
-  "justificacion": "...",
-  "estado": "pendiente"
+  "status": "alive"
 }
 ```
 
-## Health check
+---
+
+### Prueba Ready
+
 GET
 
-    /health/live
+```
+/health/ready
+```
 
-GET
+Response:
 
-    /health/ready
+```json
+{
+  "status": "ready"
+}
+```
 
-## Mock priority service
+---
+
+# Servicio Mock de Prioridad Externa
+
+Simula la plataforma externa de prioridad para compañías con el flag usa_servicio_prioridad_externo en ```True```:
+
 POST
 
-    /mock/mensajeria-del-valle/prioridad
+```
+/mock/prioridad
+```
+
+Request:
+
+```json
+{
+  "tipo_documento": "string",
+  "numero_documento_cliente": "string",
+  "tipo_solicitud": "string"
+}
+```
+
+Response:
+
+```json
+{
+  "prioridad": "string",
+  "reason": "string"
+}
+```
+
+---
 
 # Flujo de Procesamiento
 Pipeline:

@@ -32,8 +32,10 @@ class GroqLLMClient:
                 {
                     "role": "system",
                     "content": (
-                        "You are an insurance case classification system. "
-                        "Always respond in valid JSON."
+                        "Eres un sistema de clasificación de casos de atención al cliente. "
+                        "SIEMPRE responde en JSON válido. "
+                        "TODOS los textos deben estar en español. "
+                        "La 'justification' debe estar en español."
                     ),
                 },
                 {
@@ -56,21 +58,31 @@ class GroqLLMClient:
         categories_str = ", ".join(categories)
 
         return f"""
-Classify the following customer message into one of these categories:
+Clasifica el siguiente mensaje del cliente en una de estas categorías:
 
 {categories_str}
 
-Message:
+Mensaje:
 {message}
 
-Respond ONLY in JSON format:
+Responde SOLO en formato JSON válido:
 
 {{
-  "case_type": "category",
-  "confidence": 0.0 to 1.0,
-  "justification": "short explanation"
+  "case_type": "categoria exacta de la lista",
+  "confidence": número entre 0.0 y 1.0,
+  "justification": "explicación corta en español"
 }}
+
+Si el mensaje no contiene suficiente información, responde:
+
+{{
+  "case_type": "INVALIDO",
+  "confidence": 0.0,
+  "justification": "Mensaje sin suficiente información para clasificación"
+}}
+
 """
+
 
 
     def _parse_response(self, content: str) -> LLMClassificationResult:

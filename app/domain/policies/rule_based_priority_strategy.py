@@ -1,55 +1,36 @@
-from app.domain.interfaces.priority_strategy import PriorityStrategy
+from sqlalchemy.orm import Session
+
 from app.domain.models.priority_result import PriorityResult
+from app.infrastructure.repositories.regla_repository import ReglaRepository
 
 
-class RuleBasedPriorityStrategy(PriorityStrategy):
+class RuleBasedPriorityStrategy:
+    """
+    Prioridad calculada usando reglas internas (tabla reglas).
+    """
 
-    HIGH_PRIORITY_KEYWORDS = [
-        "siniestro",
-        "urgente",
-        "fraude",
-        "robo",
-        "accidente",
-    ]
+    def __init__(self, db: Session):
+        self.db = db
+        self.regla_repo = ReglaRepository(db)
 
-    MEDIUM_PRIORITY_KEYWORDS = [
-        "problema",
-        "error",
-        "reclamo",
-    ]
-
-
-    def determine_priority(
+    def calculate(
         self,
+        compania_id,
         message: str,
-        classification: str,
-        metadata: dict | None = None,
+        tipo_caso: str,
+        extracted: dict | None = None,
     ) -> PriorityResult:
+        regla = self.regla_repo.get_regla_by_tipo_caso(compania_id, tipo_caso)
 
-        text = message.lower()
-
-        for keyword in self.HIGH_PRIORITY_KEYWORDS:
-
-            if keyword in text:
-
-                return PriorityResult(
-                    level="HIGH",
-                    score=0.9,
-                    reason=f"Detected high-priority keyword: {keyword}"
-                )
-
-        for keyword in self.MEDIUM_PRIORITY_KEYWORDS:
-
-            if keyword in text:
-
-                return PriorityResult(
-                    level="MEDIUM",
-                    score=0.6,
-                    reason=f"Detected medium-priority keyword: {keyword}"
-                )
+        if regla:
+            return PriorityResult(
+                level=regla.prioridad,
+                score=0.8,
+                reason="Prioridad asignada por reglas de base de datos.",
+            )
 
         return PriorityResult(
-            level="LOW",
-            score=0.3,
-            reason="No priority keywords detected"
+            level="Media",
+            score=0.5,
+            reason="No hay regla específica; prioridad por defecto.",
         )

@@ -8,149 +8,219 @@ from sqlalchemy import (
     DateTime,
     ForeignKey,
     Integer,
-    JSON,
     UniqueConstraint,
 )
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.dialects.postgresql import JSONB, UUID
+
 from app.infrastructure.database.base import Base
 
-class Company(Base):
 
-    __tablename__ = "companies"
+# =========================================================
+# COMPANIAS
+# =========================================================
 
-    id = Column(
+class Compania(Base):
+
+    __tablename__ = "companias"
+
+    id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4
     )
 
-    nombre = Column(
+    nombre: Mapped[str] = mapped_column(
         String,
         unique=True,
         nullable=False
     )
 
-    categories = relationship(
-        "Category",
-        back_populates="company",
-        cascade="all, delete-orphan"
-    )
-
-
-
-class Category(Base):
-
-    __tablename__ = "categories"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True,
-        default=uuid.uuid4
-    )
-
-    company_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("companies.id"),
-        nullable=False
-    )
-
-    name: Mapped[str] = mapped_column(String, nullable=False)
-
-    description: Mapped[str] = mapped_column(
-        String,
-        nullable=True
-    )
-
-    is_active: Mapped[bool] = mapped_column(
-        Boolean,
-        default=True
-    )
-
-    company = relationship("Company", back_populates="categories")
-
-
-class Rule(Base):
-
-    __tablename__ = "rules"
-
-    id = Column(
-        UUID(as_uuid=True),
-        primary_key=True,
-        default=uuid.uuid4
-    )
-
-    compania_id = Column(
-        UUID(as_uuid=True),
-        ForeignKey("companies.id"),
-        nullable=False
-    )
-
-    case_type = Column(String)
-
-    keywords = Column(JSONB)
-
-    priority = Column(String)
-
-    next_step = Column(String)
-
-    justification_template = Column(String)
-
-
-class RequestLog(Base):
-
-    __tablename__ = "requests_log"
-
-    id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True,
-        default=uuid.uuid4
-    )
-
-    request_id: Mapped[str] = mapped_column(
-        String,
-        unique=True,
-        nullable=False
-    )
-
-    company_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("companies.id"),
-        nullable=True
-    )
-
-    status: Mapped[str] = mapped_column(
-        String,
-        nullable=False
-    )
-
-    latency_ms: Mapped[int] = mapped_column(
-        Integer,
-        nullable=True
-    )
-
-    error_code: Mapped[str] = mapped_column(
-        String,
-        nullable=True
-    )
-
-    error_detail: Mapped[dict] = mapped_column(
-        JSON,
-        nullable=True
-    )
-
-    created_at: Mapped[datetime] = mapped_column(
+    creada_en: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow
     )
 
-class SolicitudRecord(Base):
+    categorias = relationship(
+        "Categoria",
+        back_populates="compania",
+        cascade="all, delete-orphan"
+    )
 
-    __tablename__ = "solicitudes"
+    usa_servicio_prioridad_externo = Column(
+        Boolean,
+        default=False,
+        nullable=False
+    )
+
+    activa: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True,
+        nullable=False
+    )
+
+# =========================================================
+# CATEGORIAS
+# =========================================================
+
+class Categoria(Base):
+
+    __tablename__ = "categorias"
 
     id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
         primary_key=True,
         default=uuid.uuid4
     )
 
-    company_id: Mapped[uuid.UUID] = mapped_column(
-        ForeignKey("companies.id"),
+    compania_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companias.id"),
+        nullable=False
+    )
+
+    nombre: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    descripcion: Mapped[str] = mapped_column(
+        String,
+        nullable=True
+    )
+
+    activa: Mapped[bool] = mapped_column(
+        Boolean,
+        default=True
+    )
+
+    creada_en: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+    compania = relationship(
+        "Compania",
+        back_populates="categorias"
+    )
+
+
+# =========================================================
+# REGLAS
+# =========================================================
+
+class Regla(Base):
+
+    __tablename__ = "reglas"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
+
+    compania_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companias.id"),
+        nullable=False
+    )
+
+    tipo_caso: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    palabras_clave: Mapped[list] = mapped_column(
+        JSONB,
+        nullable=False
+    )
+
+    prioridad: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    siguiente_paso: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    plantilla_justificacion: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    creada_en: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+
+# =========================================================
+# LOGS DE SOLICITUDES
+# =========================================================
+
+class LogSolicitud(Base):
+
+    __tablename__ = "logs_solicitudes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
+
+    id_request: Mapped[str] = mapped_column(
+        String,
+        unique=True,
+        nullable=False
+    )
+
+    compania_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companias.id"),
+        nullable=True
+    )
+
+    estado: Mapped[str] = mapped_column(
+        String,
+        nullable=False
+    )
+
+    latencia_ms: Mapped[int] = mapped_column(
+        Integer,
+        nullable=True
+    )
+
+    codigo_error: Mapped[str] = mapped_column(
+        String,
+        nullable=True
+    )
+
+    detalle_error: Mapped[dict] = mapped_column(
+        JSONB,
+        nullable=True
+    )
+
+    creado_en: Mapped[datetime] = mapped_column(
+        DateTime,
+        default=datetime.utcnow
+    )
+
+
+# =========================================================
+# SOLICITUDES (CORE ENTITY)
+# =========================================================
+
+class Solicitud(Base):
+
+    __tablename__ = "solicitudes"
+
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        primary_key=True,
+        default=uuid.uuid4
+    )
+
+    compania_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("companias.id"),
         nullable=False
     )
 
@@ -159,35 +229,35 @@ class SolicitudRecord(Base):
         nullable=False
     )
 
-    request_id: Mapped[str] = mapped_column(
+    id_request: Mapped[str] = mapped_column(
         String,
         nullable=False
     )
 
-    status: Mapped[str] = mapped_column(
+    estado: Mapped[str] = mapped_column(
         String,
         nullable=False
     )
 
-    external_case_id: Mapped[str | None] = mapped_column(
+    id_caso_externo: Mapped[str | None] = mapped_column(
         String,
         nullable=True
     )
 
-    response_json: Mapped[dict] = mapped_column(
+    respuesta_json: Mapped[dict] = mapped_column(
         JSONB,
         nullable=False
     )
 
-    created_at: Mapped[datetime] = mapped_column(
+    creada_en: Mapped[datetime] = mapped_column(
         DateTime,
         default=datetime.utcnow
     )
 
     __table_args__ = (
         UniqueConstraint(
-            "company_id",
+            "compania_id",
             "solicitud_id",
-            name="uq_company_solicitud"
+            name="uq_compania_solicitud"
         ),
     )

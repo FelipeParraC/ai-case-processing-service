@@ -1,10 +1,10 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, func
 
-from app.infrastructure.database.models import Company
+from app.infrastructure.database.models import Compania
 
 
-class CompanyRepository:
+class CompaniaRepository:
 
     def __init__(self, db: Session):
         self.db = db
@@ -14,10 +14,10 @@ class CompanyRepository:
     # Buscar por ID (usado en PriorityService)
     # ===============================
 
-    def get_by_id(self, company_id):
+    def get_by_id(self, compania_id):
 
-        stmt = select(Company).where(
-            Company.id == company_id
+        stmt = select(Compania).where(
+            Compania.id == compania_id
         )
 
         return self.db.execute(stmt).scalar_one_or_none()
@@ -28,12 +28,12 @@ class CompanyRepository:
     # (usado en endpoint principal)
     # ===============================
 
-    def get_by_name_or_code(self, value: str):
+    def get_by_nombre(self, value: str):
 
         normalized = value.strip().upper()
 
-        stmt = select(Company).where(
-            func.upper(Company.nombre) == normalized
+        stmt = select(Compania).where(
+            func.upper(Compania.nombre) == normalized
         )
 
         return self.db.execute(stmt).scalar_one_or_none()
